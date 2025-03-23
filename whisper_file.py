@@ -1,5 +1,6 @@
 import whisper
 import os
+from tqdm import tqdm
 
 """
 This project is used to transcribe audio files to text using the OpenAI Whisper model.
@@ -14,7 +15,8 @@ recording_text_files = "./Recording_text_files" #path to save text files
 
 recording_titles = os.listdir(recordings) #list of audio files
 
-for item in recording_titles:
+
+for item in tqdm(recording_titles):
     story_path = os.path.join(recordings, item)
     
     # STEP 1: Transcribe audio file to text; pulled from https://github.com/openai/whisper/blob/main/README.md
