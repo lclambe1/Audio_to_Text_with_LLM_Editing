@@ -1,1 +1,0 @@
- This is a test to access and try OpenAI's whisper to see how well and how accurately it can translate my voice and audio into text.
