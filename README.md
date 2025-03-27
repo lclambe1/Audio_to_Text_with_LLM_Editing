@@ -4,5 +4,7 @@ This repository uses OpenAI's Whisper to take .mp3 (or similar audio files) and 
 2. The AI edits made to the text transcription to fix basic grammar; saved as a .docx under the Recording_docx_files_grammar_edits folder
 3. The AI edits made to the text transcription to enhance the writing while still keeping the original author's style; saved as a .docx under the Recording_docx_files_AI_edits folder
 
+The whisper_file.py contains the code to pull recordings from the Recordings folder and subsequently save them to the other folders. 
+
 ## Possible use cases
 This project is ideal for those who need to transcibe audio files for journaling, writing a book, preserving a family member's memories and history, etc. Happy transcription!
