@@ -17,7 +17,7 @@ import warnings
 This project is used to transcribe audio files to text using the OpenAI Whisper model.
 It uses a virtual environment with the requirements installed there.
 It is intended to be used to transcribe audio files and then convert the .txt files to a .docx file.
-From here, a LLM will be used to edit the .docx file to make it more readable.
+From here, a LLM is used to edit the .docx file to make it more readable and correct for grammar.
 """
 
 def fxn():
@@ -145,21 +145,34 @@ if __name__ == "__main__":
 
 
         for item in tqdm(recording_titles):
-            story_path = os.path.join(recordings, item)
-            
-            # Get the length of the audio file to be able to truncate and avoid ollama halucinations
-            length_of_audio = librosa.get_duration(filename=story_path)
-            print(f"\nYour audio is {length_of_audio} seconds long.")
+            if item.endswith((".wav" , ".mp3" , ".m4a" , ".mp4" , ".aac", ".flac" , ".ogg" , ".webm" , ".wma")):
+                try:
+                    story_path = os.path.join(recordings, item)
+                    
+                    # Get the length of the audio file to be able to truncate and avoid ollama halucinations
+                    length_of_audio = librosa.get_duration(filename=story_path)
+                    hours = int(length_of_audio // 3600)
+                    minutes = int((length_of_audio - hours*3600 ) // 60)
+                    seconds = int((length_of_audio - hours*3600 - minutes*60) % 60)
+                    print(f"\nYour audio is {hours} hours, {minutes} minutes and {seconds} seconds long.")
 
-            # STEP 1: transcribe the audio
-            result = transcribe_audio(model, story_path, length_of_audio)
-            print("Congratulations! Your audio has been transcribed.\n")
-            
-            # STEP 2: write the text to a .txt file
-            write_text_to_file(item, result, recording_text_files)
-            print("Your text has been written to a .txt file.\n")
-            
-            # STEP 3: correct the grammar
-            # NOTE: The correct_grammar function will also call the ai_edits function to edit the document separately
-            correct_grammar_and_edit(item, result, recording_grammar_file_path, recording_ai_file_path)
-            print("Your text has been corrected and edited. Thanks for using the program :)\n")
+                    # STEP 1: transcribe the audio
+                    result = transcribe_audio(model, story_path, length_of_audio)
+                    print("Congratulations! Your audio has been transcribed.\n")
+                    
+                    # STEP 2: write the text to a .txt file
+                    write_text_to_file(item, result, recording_text_files)
+                    print("Your text has been written to a .txt file.\n")
+                    
+                    # STEP 3: correct the grammar
+                    # NOTE: The correct_grammar function will also call the ai_edits function to edit the document separately
+                    correct_grammar_and_edit(item, result, recording_grammar_file_path, recording_ai_file_path)
+                    print("Your text has been corrected and edited. Thanks for using the program :)\n")
+                
+                except Exception as e:
+                    print(f"\nThe file {item} has produced the error: {e}")
+                    continue
+                
+            else:
+                print(f"\nThe file {item} is not an accepted audio file type. Please fix this file.")
+                continue
