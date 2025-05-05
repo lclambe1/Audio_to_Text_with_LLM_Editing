@@ -3,22 +3,17 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bzip2=1.0.8=h2bbff1b_6
-  - ca-certificates=2025.1.31=h56e8100_0
-  - ffmpeg=4.3.1=ha925a31_0
-  - libffi=3.4.4=hd77b12b_1
-  - openssl=3.0.16=h3f729d1_0
-  - pip=25.0=py310haa95532_0
-  - python=3.10.16=h4607a30_1
-  - setuptools=75.8.0=py310haa95532_0
-  - sqlite=3.45.3=h2bbff1b_0
-  - tk=8.6.14=h0416ee5_0
-  - tzdata=2025a=h04d1e81_0
-  - vc=14.42=haa95532_4
-  - vs2015_runtime=14.42.34433=he0abc0d_4
-  - wheel=0.45.1=py310haa95532_0
-  - xz=5.6.4=h4754444_1
-  - zlib=1.2.13=h8cc25b3_1
+  - python=3.10
+  - pip
+  - ffmpeg
+  - libffi
+  - openssl
+  - setuptools
+  - sqlite
+  - tk
+  - tzdata
+  - wheel
+  - zlib
   - pip:
       - certifi==2025.1.31
       - charset-normalizer==3.4.1
