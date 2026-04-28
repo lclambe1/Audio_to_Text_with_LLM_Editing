@@ -1,0 +1,6 @@
+.env.local
+.next/
+node_modules/
+ios/
+android/
+.DS_Store
