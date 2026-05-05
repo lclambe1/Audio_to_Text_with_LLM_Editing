@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { transcribeBuffer } from "@/lib/openai/transcribe";
-import { correctGrammar, aiEdit } from "@/lib/openai/edit";
 
 const ACCEPTED_TYPES = [
   "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav",
   "audio/webm", "audio/ogg", "audio/flac", "audio/aac",
 ];
+
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
   }
 
-  // Upload raw audio to Supabase Storage
   const buffer = Buffer.from(await file.arrayBuffer());
   const storagePath = `${user.id}/${Date.now()}-${file.name}`;
   const { error: uploadError } = await supabase.storage
@@ -34,7 +33,6 @@ export async function POST(req: NextRequest) {
 
   const { data: { publicUrl } } = supabase.storage.from("audio").getPublicUrl(storagePath);
 
-  // Insert transcription row with pending status
   const { data: row, error: insertError } = await supabase
     .from("transcriptions")
     .insert({
@@ -50,22 +48,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
   }
 
-  // Run the pipeline (Whisper → grammar → AI edit)
   try {
-    const rawText = await transcribeBuffer(buffer, file.name);
+    const backendForm = new FormData();
+    backendForm.append("audio", new Blob([buffer], { type: file.type }), file.name);
 
-    await supabase.from("transcriptions").update({ raw_text: rawText, status: "editing" }).eq("id", row.id);
+    const backendRes = await fetch(`${BACKEND_URL}/transcribe`, {
+      method: "POST",
+      body: backendForm,
+    });
 
-    const grammarText = await correctGrammar(rawText);
-    const aiText = await aiEdit(grammarText);
+    if (!backendRes.ok) {
+      throw new Error(await backendRes.text());
+    }
+
+    const { raw_text, grammar_text, ai_text } = await backendRes.json();
 
     await supabase.from("transcriptions").update({
-      grammar_text: grammarText,
-      ai_text: aiText,
+      raw_text,
+      grammar_text,
+      ai_text,
       status: "done",
     }).eq("id", row.id);
 
-    return NextResponse.json({ id: row.id, status: "done" });
+    return NextResponse.json({ id: row.id, status: "done", ai_text });
   } catch (err) {
     await supabase.from("transcriptions").update({ status: "error" }).eq("id", row.id);
     console.error("Pipeline error:", err);
