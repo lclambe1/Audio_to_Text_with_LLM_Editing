@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 
-type Provider = "google" | "facebook";
+type Provider = "google" | "facebook" | "microsoft";
 
 const providers: { id: Provider; label: string; icon: React.ReactNode }[] = [
   {
@@ -23,6 +23,18 @@ const providers: { id: Provider; label: string; icon: React.ReactNode }[] = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
         <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.931-1.956 1.886v2.269h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+      </svg>
+    ),
+  },
+  {
+    id: "microsoft",
+    label: "Microsoft",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 21 21">
+        <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+        <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
       </svg>
     ),
   },
