@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import type { Transcription } from "@/types";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import type { Transcription, SubjectProfile } from "@/types";
 import { cn } from "@/lib/utils";
+import TranscriptionPlayer from "./TranscriptionPlayer";
+import SubjectProfilePicker from "@/components/profile/SubjectProfilePicker";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-gray-100 text-gray-500",
@@ -14,47 +17,164 @@ const STATUS_STYLES: Record<string, string> = {
 
 type Tab = "raw" | "grammar" | "ai";
 
-export default function TranscriptionCard({ transcription: t }: { transcription: Transcription }) {
-  const [tab, setTab] = useState<Tab>("ai");
+export default function TranscriptionCard({
+  transcription: t,
+  isPro = false,
+}: {
+  transcription: Transcription;
+  isPro?: boolean;
+}) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>(isPro ? "ai" : "grammar");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
+  const [subjectProfileId, setSubjectProfileId] = useState<string | null>(t.subject_profile_id);
+  const [subject, setSubject] = useState<SubjectProfile | null | undefined>(t.subject_profiles);
+
+  // Editable title
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState(t.title);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingTitle) titleInputRef.current?.select();
+  }, [editingTitle]);
+
+  const commitTitle = async () => {
+    setEditingTitle(false);
+    const trimmed = titleValue.trim();
+    if (!trimmed) { setTitleValue(t.title); return; }
+    if (trimmed === t.title) return;
+    await fetch(`/api/transcriptions/${t.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: trimmed }),
+    });
+  };
+
+  const handleDelete = async () => {
+    setIsDeleted(true); // optimistic — hide immediately
+    await fetch(`/api/transcriptions/${t.id}`, { method: "DELETE" });
+    router.refresh();
+  };
+
+  if (isDeleted) return null;
 
   const text = tab === "raw" ? t.raw_text : tab === "grammar" ? t.grammar_text : t.ai_text;
 
+  const handleProfileChange = async (id: string | null) => {
+    setSubjectProfileId(id);
+    // Optimistically clear subject until page refresh brings the joined data
+    setSubject(null);
+    await fetch(`/api/transcriptions/${t.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject_profile_id: id }),
+    });
+    router.refresh();
+  };
+
   return (
     <div className="border rounded-xl overflow-hidden">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition text-left"
-      >
-        <div>
-          <p className="font-semibold">{t.title}</p>
-          <p className="text-xs text-gray-400">{new Date(t.created_at).toLocaleString()}</p>
-        </div>
-        <span className={cn("text-xs px-2 py-1 rounded-full font-medium", STATUS_STYLES[t.status])}>
-          {t.status}
-        </span>
-      </button>
+      {/* Header row — no full-row hover */}
+      <div className="w-full flex items-center justify-between px-5 py-4">
 
-      {open && t.status === "done" && (
-        <div className="border-t px-5 py-4">
-          {/* Tab selector */}
-          <div className="flex gap-2 mb-4">
-            {(["raw", "grammar", "ai"] as Tab[]).map((tab_) => (
-              <button
-                key={tab_}
-                onClick={() => setTab(tab_)}
-                className={cn(
-                  "text-xs px-3 py-1 rounded-full font-medium transition",
-                  tab === tab_
-                    ? "bg-brand-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                )}
-              >
-                {tab_ === "raw" ? "Raw" : tab_ === "grammar" ? "Grammar Fixed" : "AI Edited"}
-              </button>
-            ))}
+        {/* Left: avatar picker + title */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Avatar — click to reassign profile */}
+          <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <SubjectProfilePicker
+              value={subjectProfileId}
+              onChange={handleProfileChange}
+              avatarOnly
+            />
           </div>
-          <p className="text-sm whitespace-pre-wrap leading-relaxed text-gray-700">{text}</p>
+
+          {/* Title area — click to expand */}
+          <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setOpen((o) => !o)}>
+            {/* Double-click title to rename */}
+            {editingTitle ? (
+              <input
+                ref={titleInputRef}
+                value={titleValue}
+                onChange={(e) => setTitleValue(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitTitle();
+                  if (e.key === "Escape") { setTitleValue(t.title); setEditingTitle(false); }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="font-semibold border-b border-gray-400 outline-none bg-transparent w-full text-sm"
+              />
+            ) : (
+              <p
+                className="font-semibold truncate"
+                onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); }}
+                title="Double-click to rename"
+              >
+                {titleValue}
+              </p>
+            )}
+            <p className="text-xs text-gray-400">
+              {subject && <span className="mr-2">{subject.display_name} ·</span>}
+              {new Date(t.created_at).toLocaleString()}
+              {t.duration_seconds != null && (
+                <span className="ml-2">· {Math.floor(t.duration_seconds / 60)}m {Math.round(t.duration_seconds % 60)}s</span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Right: status + delete */}
+        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+          <span className={cn("text-xs px-2 py-1 rounded-full font-medium", STATUS_STYLES[t.status])}>
+            {t.status}
+          </span>
+
+          {!showConfirm ? (
+            <button
+              onClick={() => setShowConfirm(true)}
+              className="text-gray-400 hover:text-red-500 transition p-1 rounded"
+              title="Delete"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-500">Delete?</span>
+              <button onClick={handleDelete} className="text-xs text-red-500 font-semibold hover:underline">Yes</button>
+              <button onClick={() => setShowConfirm(false)} className="text-xs text-gray-400 hover:underline">No</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Expanded content */}
+      {open && t.status === "done" && (
+        <div className="border-t px-5 py-4 flex flex-col gap-4">
+          {t.word_timestamps && t.word_timestamps.length > 0 && (
+            <TranscriptionPlayer
+              transcriptionId={t.id}
+              audioUrl={t.audio_url}
+              words={t.word_timestamps}
+              isPro={isPro}
+            />
+          )}
+
+          <div className="flex gap-2">
+            <button onClick={() => setTab("raw")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "raw" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>Raw</button>
+            <button onClick={() => setTab("grammar")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "grammar" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>Grammar Fixed</button>
+            {isPro ? (
+              <button onClick={() => setTab("ai")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "ai" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>AI Edited ✦</button>
+            ) : (
+              <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-400 border border-dashed">AI Edited — Pro only</span>
+            )}
+          </div>
+
+          <p className="text-sm whitespace-pre-wrap leading-relaxed text-gray-700">{text ?? "—"}</p>
         </div>
       )}
     </div>

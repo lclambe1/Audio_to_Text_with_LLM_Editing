@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import SubjectProfilePicker from "@/components/profile/SubjectProfilePicker";
 
 type Status = "idle" | "recording" | "processing" | "done" | "error";
 
@@ -151,6 +152,8 @@ export default function RecorderApp() {
   const [transcriptText, setTranscriptText] = useState("Tap record to begin speaking...");
   const [menuOpen, setMenuOpen] = useState(false);
   const [recordingName, setRecordingName] = useState("New Recording");
+  const [subjectProfileId, setSubjectProfileId] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -232,6 +235,7 @@ export default function RecorderApp() {
       const formData = new FormData();
       const filename = `${recordingName.replace(/\s+/g, "_")}.webm`;
       formData.append("audio", blob, filename);
+      if (subjectProfileId) formData.append("subject_profile_id", subjectProfileId);
 
       const res = await fetch("/api/transcribe", { method: "POST", body: formData });
 
@@ -242,7 +246,8 @@ export default function RecorderApp() {
         return;
       }
 
-      const { ai_text } = await res.json();
+      const { id, ai_text } = await res.json();
+      setSavedId(id ?? null);
       setStatus("done");
       setTranscriptText(ai_text ?? "Transcription complete.");
       router.refresh();
@@ -264,7 +269,21 @@ export default function RecorderApp() {
     setStatus("idle");
     setTranscriptText("Tap record to begin speaking...");
     setRecordingName("New Recording");
+    setSubjectProfileId(null);
+    setSavedId(null);
   };
+
+  const handleNameCommit = useCallback(async (name: string) => {
+    setRecordingName(name);
+    if (status === "done" && savedId && name.trim() && name.trim() !== recordingName) {
+      await fetch(`/api/transcriptions/${savedId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: name.trim() }),
+      });
+      router.refresh();
+    }
+  }, [status, savedId, recordingName, router]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Mono', 'Courier New', monospace" }}>
@@ -289,7 +308,7 @@ export default function RecorderApp() {
 
           <EditableName
             value={recordingName}
-            onChange={setRecordingName}
+            onChange={handleNameCommit}
             disabled={status === "recording" || status === "processing"}
           />
 
@@ -324,6 +343,13 @@ export default function RecorderApp() {
 
         {/* Main Content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 20px 28px", gap: "20px" }}>
+
+          {/* Subject profile picker */}
+          <SubjectProfilePicker
+            value={subjectProfileId}
+            onChange={setSubjectProfileId}
+            disabled={status === "recording" || status === "processing"}
+          />
 
           {/* Waveform Area */}
           <div style={{ background: "#1f2937", borderRadius: "16px", padding: "16px 12px", border: "1px solid #374151", minHeight: "96px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
@@ -372,7 +398,7 @@ export default function RecorderApp() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <span style={{ fontSize: "10px", letterSpacing: "0.15em", color: "#6b7280", textTransform: "uppercase" }}>
-                  {status === "done" ? "Transcript" : "Live Transcript"}
+                  {status === "done" ? "Transcript" : "Let's get talking!"}
                 </span>
                 {(isRecording || status === "processing") && (
                   <div style={{ width: "6px", height: "6px", background: "#10b981", borderRadius: "50%", animation: "pulse 1.2s ease-in-out infinite" }} />

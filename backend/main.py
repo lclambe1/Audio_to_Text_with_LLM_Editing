@@ -1,7 +1,7 @@
 import tempfile
 import os
 import httpx
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
 
@@ -39,15 +39,46 @@ async def ollama(prompt: str) -> str:
 
 
 @app.post("/transcribe")
-async def transcribe(audio: UploadFile = File(...)):
+async def transcribe(
+    audio: UploadFile = File(...),
+    max_duration: float = Query(default=0, description="Max allowed duration in seconds (0 = unlimited)"),
+    ai_edit: bool = Query(default=True, description="Run grammar correction and AI editing"),
+):
     suffix = os.path.splitext(audio.filename or "audio.webm")[1] or ".webm"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(await audio.read())
         tmp_path = tmp.name
 
     try:
-        segments, _ = get_model().transcribe(tmp_path, beam_size=5)
-        raw_text = " ".join(seg.text.strip() for seg in segments)
+        segments_gen, info = get_model().transcribe(
+            tmp_path,
+            beam_size=5,
+            word_timestamps=True,
+        )
+
+        if max_duration and info.duration > max_duration:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Recording is {info.duration:.0f}s — free plan limit is {max_duration:.0f}s (10 min). Upgrade to Pro for longer recordings."
+            )
+
+        words = []
+        raw_parts = []
+        for seg in segments_gen:
+            raw_parts.append(seg.text.strip())
+            if seg.words:
+                for w in seg.words:
+                    words.append({
+                        "word": w.word,
+                        "start": round(w.start, 3),
+                        "end": round(w.end, 3),
+                    })
+
+        raw_text = " ".join(raw_parts)
+        duration = round(info.duration, 1)
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
@@ -56,18 +87,25 @@ async def transcribe(audio: UploadFile = File(...)):
     grammar_text = raw_text
     ai_text = raw_text
 
-    try:
-        grammar_text = await ollama(
-            f"Correct the grammar, spelling, and punctuation in this text. "
-            f"Keep word changes minimal. Return only the corrected text, no comments.\n\n{raw_text}"
-        )
-        ai_text = await ollama(
-            f"You are a clarity and editing assistant. Improve grammar, punctuation, and flow "
-            f"while keeping the original tone and word choices. Make it sound professional. "
-            f"Return only the corrected version, no commentary.\n\nInput: {grammar_text}"
-        )
-    except Exception:
-        # Ollama unavailable — return raw transcription for all fields
-        pass
+    if ai_edit:
+        try:
+            grammar_text = await ollama(
+                f"Correct the grammar, spelling, and punctuation in this text. "
+                f"Keep word changes minimal. Return only the corrected text, no comments.\n\n{raw_text}"
+            )
+            ai_text = await ollama(
+                f"You are a clarity and editing assistant. Improve grammar, punctuation, and flow "
+                f"while keeping the original tone and word choices. Make it sound professional. "
+                f"Return only the corrected version, no commentary.\n\nInput: {grammar_text}"
+            )
+        except Exception:
+            grammar_text = raw_text
+            ai_text = raw_text
 
-    return {"raw_text": raw_text, "grammar_text": grammar_text, "ai_text": ai_text}
+    return {
+        "raw_text": raw_text,
+        "grammar_text": grammar_text,
+        "ai_text": ai_text,
+        "duration": duration,
+        "word_timestamps": words,
+    }
