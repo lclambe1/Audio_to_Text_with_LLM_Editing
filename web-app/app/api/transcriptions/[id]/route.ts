@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await (await createClient()).auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { error } = await supabase
+  const { error } = await createAdminClient()
     .from("transcriptions")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id)
@@ -25,8 +25,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await (await createClient()).auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -39,7 +38,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { error } = await createAdminClient()
     .from("transcriptions")
     .update(update)
     .eq("id", id)

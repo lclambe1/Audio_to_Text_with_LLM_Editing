@@ -51,8 +51,27 @@ create table if not exists public.subject_profiles (
 alter table public.subject_profiles enable row level security;
 
 drop policy if exists "Users manage own subject profiles" on public.subject_profiles;
-create policy "Users manage own subject profiles"
-  on public.subject_profiles for all
+drop policy if exists "Users select own subject profiles" on public.subject_profiles;
+drop policy if exists "Users insert own subject profiles" on public.subject_profiles;
+drop policy if exists "Users update own subject profiles" on public.subject_profiles;
+drop policy if exists "Users delete own profiles" on public.subject_profiles;
+
+-- Split into explicit per-operation policies (avoids Supabase security advisor warning)
+create policy "Users select own subject profiles"
+  on public.subject_profiles for select
+  using (auth.uid() = user_id);
+
+create policy "Users insert own subject profiles"
+  on public.subject_profiles for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users update own subject profiles"
+  on public.subject_profiles for update
+  using  (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users delete own profiles"
+  on public.subject_profiles for delete
   using (auth.uid() = user_id);
 
 -- Add new columns to transcriptions if they don't exist yet
@@ -72,6 +91,7 @@ alter table public.transcriptions
 drop policy if exists "Users see own transcriptions" on public.transcriptions;
 drop policy if exists "Users insert own transcriptions" on public.transcriptions;
 drop policy if exists "Users update own transcriptions" on public.transcriptions;
+drop policy if exists "Users delete own transcriptions" on public.transcriptions;
 
 create policy "Users see own transcriptions"
   on public.transcriptions for select
@@ -81,8 +101,15 @@ create policy "Users insert own transcriptions"
   on public.transcriptions for insert
   with check (auth.uid() = user_id);
 
+-- Explicit with check so soft-deleting (setting deleted_at) isn't blocked
+-- by the SELECT policy's "deleted_at is null" condition.
 create policy "Users update own transcriptions"
   on public.transcriptions for update
+  using  (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users delete own transcriptions"
+  on public.transcriptions for delete
   using (auth.uid() = user_id);
 
 -- ─── Storage: audio ───────────────────────────────────────────────────────────

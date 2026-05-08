@@ -8,11 +8,11 @@ import TranscriptionPlayer from "./TranscriptionPlayer";
 import SubjectProfilePicker from "@/components/profile/SubjectProfilePicker";
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-500",
-  transcribing: "bg-blue-100 text-blue-600",
-  editing: "bg-yellow-100 text-yellow-700",
-  done: "bg-green-100 text-green-700",
-  error: "bg-red-100 text-red-600",
+  pending: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400",
+  transcribing: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",
+  editing: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
+  done: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  error: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
 };
 
 type Tab = "raw" | "grammar" | "ai";
@@ -54,8 +54,13 @@ export default function TranscriptionCard({
   };
 
   const handleDelete = async () => {
-    setIsDeleted(true); // optimistic — hide immediately
-    await fetch(`/api/transcriptions/${t.id}`, { method: "DELETE" });
+    setIsDeleted(true);
+    const res = await fetch(`/api/transcriptions/${t.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setIsDeleted(false);
+      setShowConfirm(false);
+      return;
+    }
     router.refresh();
   };
 
@@ -76,7 +81,7 @@ export default function TranscriptionCard({
   };
 
   return (
-    <div className="border rounded-xl overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800/50">
       {/* Header row — no full-row hover */}
       <div className="w-full flex items-center justify-between px-5 py-4">
 
@@ -154,7 +159,7 @@ export default function TranscriptionCard({
 
       {/* Expanded content */}
       {open && t.status === "done" && (
-        <div className="border-t px-5 py-4 flex flex-col gap-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-4 flex flex-col gap-4">
           {t.word_timestamps && t.word_timestamps.length > 0 && (
             <TranscriptionPlayer
               transcriptionId={t.id}
@@ -165,16 +170,16 @@ export default function TranscriptionCard({
           )}
 
           <div className="flex gap-2">
-            <button onClick={() => setTab("raw")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "raw" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>Raw</button>
-            <button onClick={() => setTab("grammar")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "grammar" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>Grammar Fixed</button>
+            <button onClick={() => setTab("raw")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "raw" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600")}>Raw</button>
+            <button onClick={() => setTab("grammar")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "grammar" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600")}>Grammar Fixed</button>
             {isPro ? (
-              <button onClick={() => setTab("ai")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "ai" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>AI Edited ✦</button>
+              <button onClick={() => setTab("ai")} className={cn("text-xs px-3 py-1 rounded-full font-medium transition", tab === "ai" ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600")}>AI Edited ✦</button>
             ) : (
-              <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-400 border border-dashed">AI Edited — Pro only</span>
+              <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-400 border border-dashed dark:bg-gray-800 dark:border-gray-600">AI Edited — Pro only</span>
             )}
           </div>
 
-          <p className="text-sm whitespace-pre-wrap leading-relaxed text-gray-700">{text ?? "—"}</p>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed text-gray-700 dark:text-gray-300">{text ?? "—"}</p>
         </div>
       )}
     </div>
