@@ -286,7 +286,7 @@ export default function RecorderApp() {
   }, [status, savedId, recordingName, router]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Mono', 'Courier New', monospace" }}>
+    <div onClick={() => setMenuOpen(false)} style={{ minHeight: "100vh", background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Mono', 'Courier New', monospace" }}>
       <div style={{ width: "360px", minHeight: "680px", background: "#111827", borderRadius: "40px", border: "2px solid #1f2937", boxShadow: "0 0 0 6px #0f172a, 0 32px 80px rgba(0,0,0,0.8)", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
 
         {/* Status bar */}
@@ -298,7 +298,7 @@ export default function RecorderApp() {
         {/* Top Bar */}
         <div style={{ height: "52px", background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", borderBottom: "1px solid #1f2937", position: "relative" }}>
           <button
-            onClick={() => setMenuOpen((o) => !o)}
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
             style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", gap: "5px", padding: "4px" }}
           >
             {[0, 1, 2].map((i) => (
@@ -312,16 +312,12 @@ export default function RecorderApp() {
             disabled={status === "recording" || status === "processing"}
           />
 
-          <button
-            onClick={handleNewRecording}
-            style={{ background: "none", border: "1px solid #374151", borderRadius: "6px", color: "#9ca3af", fontSize: "18px", width: "32px", height: "32px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-            title="New Recording"
-          >+</button>
+          <div style={{ width: "32px" }} />
         </div>
 
         {/* Slide-out Menu */}
         {menuOpen && (
-          <div style={{ position: "absolute", top: "80px", left: "0", width: "200px", background: "#1f2937", border: "1px solid #374151", borderRadius: "0 12px 12px 0", zIndex: 100, overflow: "hidden", boxShadow: "8px 4px 24px rgba(0,0,0,0.5)" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "80px", left: "0", width: "200px", background: "#1f2937", border: "1px solid #374151", borderRadius: "0 12px 12px 0", zIndex: 100, overflow: "hidden", boxShadow: "8px 4px 24px rgba(0,0,0,0.5)" }}>
             {[
               { icon: "📋", label: "Transcriptions", href: "/dashboard/transcriptions" },
               { icon: "💳", label: "Billing", href: "/dashboard/billing" },

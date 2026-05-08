@@ -19,8 +19,21 @@ export default function SubjectProfilePicker({ value, onChange, disabled, avatar
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const selected = profiles.find((p) => p.id === value) ?? null;
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setAdding(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   useEffect(() => {
     fetch("/api/profiles")
@@ -71,7 +84,7 @@ export default function SubjectProfilePicker({ value, onChange, disabled, avatar
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div ref={containerRef} style={{ position: "relative" }}>
       {avatarOnly ? (
         // Compact mode: just the avatar circle, click to reassign
         <button
