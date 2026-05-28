@@ -17,7 +17,7 @@ function AnimatedWave({
     Array.from({ length: 40 }, (_, i) => 8 + Math.sin(i * 0.5) * 8)
   );
   const rafRef = useRef<number>(0);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!isRecording) {
