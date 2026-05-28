@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import ProfileFolder from "@/components/transcription/ProfileFolder";
+import DriveToast from "@/components/DriveToast";
 import type { Transcription, SubjectProfile } from "@/types";
 
-export default async function TranscriptionsPage() {
+export default async function TranscriptionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ success?: string; error?: string }>;
+}) {
+  const { success, error } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -26,6 +32,7 @@ export default async function TranscriptionsPage() {
   if (rows.length === 0) {
     return (
       <div className="max-w-3xl mx-auto">
+        <DriveToast param={success ?? error ?? null} />
         <h1 className="text-2xl font-bold mb-6">Transcriptions</h1>
         <p className="text-gray-400">No transcriptions yet. Head to the recorder to get started.</p>
       </div>
@@ -57,6 +64,7 @@ export default async function TranscriptionsPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
+      <DriveToast param={success ?? error ?? null} />
       <h1 className="text-2xl font-bold mb-6">Transcriptions</h1>
 
       {hasMultipleGroups ? (

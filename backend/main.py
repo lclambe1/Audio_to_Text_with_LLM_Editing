@@ -91,7 +91,7 @@ async def transcribe(
         try:
             grammar_text = await ollama(
                 f"Correct the grammar, spelling, and punctuation in this text. "
-                f"Keep word changes minimal. Return only the corrected text, no comments.\n\n{raw_text}"
+                f"Do not alter words. Return only the corrected grammar, no comments.\n\n{raw_text}"
             )
             ai_text = await ollama(
                 f"You are a clarity and editing assistant. Improve grammar, punctuation, and flow "

@@ -7,6 +7,14 @@ import { cn } from "@/lib/utils";
 import TranscriptionPlayer from "./TranscriptionPlayer";
 import SubjectProfilePicker from "@/components/profile/SubjectProfilePicker";
 
+function downloadTxt(filename: string, text: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+  a.download = `${filename}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400",
   transcribing: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",
@@ -180,6 +188,45 @@ export default function TranscriptionCard({
           </div>
 
           <p className="text-sm whitespace-pre-wrap leading-relaxed text-gray-700 dark:text-gray-300">{text ?? "—"}</p>
+
+          {/* Export actions */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <span className="text-xs text-gray-400 mr-1">Export:</span>
+
+            {/* Download .txt */}
+            <button
+              onClick={() => downloadTxt(titleValue, text ?? "")}
+              className="text-xs px-3 py-1 rounded-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            >
+              Download .txt
+            </button>
+
+            {/* Download audio */}
+            <a
+              href={t.audio_url}
+              download={`${titleValue}.audio`}
+              className="text-xs px-3 py-1 rounded-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            >
+              Download audio
+            </a>
+
+            {/* Save to Google Drive — Pro only */}
+            {isPro ? (
+              <a
+                href={`/api/auth/google?transcriptionId=${t.id}&tab=${tab}&title=${encodeURIComponent(titleValue)}`}
+                className="text-xs px-3 py-1 rounded-full border border-blue-400 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition flex items-center gap-1"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.372 0 0 5.373 0 12s5.372 12 12 12 12-5.373 12-12S18.628 0 12 0zm6.405 17.4l-2.07-3.585H7.665L5.595 17.4H2.52L12 2.4l9.48 15H18.405zM9.735 11.4l2.265-3.923 2.265 3.923H9.735z"/>
+                </svg>
+                Save to Google Drive
+              </a>
+            ) : (
+              <span className="text-xs px-3 py-1 rounded-full border border-dashed border-gray-300 dark:border-gray-600 text-gray-400">
+                Google Drive — Pro only
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

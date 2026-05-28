@@ -16,7 +16,7 @@ export default function LandingPage() {
         </Link>
         <Link
           href="/login"
-          className="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition"
+          className="px-6 py-3 border border-gray-300 dark:border-gray-500 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition"
         >
           Log In
         </Link>
@@ -30,11 +30,11 @@ export default function LandingPage() {
           },
           {
             title: "AI Transcription",
-            body: "OpenAI Whisper converts speech to text with high accuracy.",
+            body: "Convert speech to text with high accuracy.",
           },
           {
-            title: "Two-Pass Editing",
-            body: "GPT-4o fixes grammar, then polishes flow and clarity.",
+            title: "AI Editing",
+            body: "Allow AI to be your personal editor; fix grammar and polish flow!",
           },
         ].map((f) => (
           <div key={f.title} className="p-6 border rounded-xl">

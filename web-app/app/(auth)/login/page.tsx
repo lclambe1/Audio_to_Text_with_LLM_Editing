@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -63,7 +63,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-brand-600 text-white rounded-lg py-2 font-semibold hover:bg-brand-700 disabled:opacity-50 transition"
+            className="bg-brand-600 text-white border border-brand-700 rounded-lg py-2 font-semibold hover:bg-brand-500 hover:ring-2 hover:ring-brand-500 hover:ring-offset-2 dark:hover:ring-offset-gray-900 disabled:opacity-50 transition"
           >
             {loading ? "Logging in..." : "Log In"}
           </button>

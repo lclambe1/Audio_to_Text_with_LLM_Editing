@@ -23,17 +23,22 @@ export async function POST(req: NextRequest) {
     .single();
   const isPro = sub?.plan === "pro";
 
-  // Free tier: check recording count
+  // Free tier: check how many transcriptions were created this calendar month
+  // (includes deleted ones so users can't bypass the limit by deleting and re-recording)
   if (!isPro) {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
     const { count } = await supabase
       .from("transcriptions")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
-      .is("deleted_at", null);
+      .gte("created_at", startOfMonth.toISOString());
 
     if ((count ?? 0) >= FREE_MAX_RECORDINGS) {
       return NextResponse.json(
-        { error: `Free plan limit reached (${FREE_MAX_RECORDINGS} recordings). Delete one or upgrade to Pro.` },
+        { error: `Free plan limit reached (${FREE_MAX_RECORDINGS} transcriptions this month). Upgrade to Pro for unlimited access.` },
         { status: 403 }
       );
     }

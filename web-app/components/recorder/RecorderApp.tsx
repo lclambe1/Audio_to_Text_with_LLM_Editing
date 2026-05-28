@@ -145,7 +145,7 @@ function EditableName({
   );
 }
 
-export default function RecorderApp() {
+export default function RecorderApp({ isPro = false }: { isPro?: boolean }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("idle");
   const [seconds, setSeconds] = useState(0);
@@ -154,6 +154,7 @@ export default function RecorderApp() {
   const [recordingName, setRecordingName] = useState("New Recording");
   const [subjectProfileId, setSubjectProfileId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -240,9 +241,15 @@ export default function RecorderApp() {
       const res = await fetch("/api/transcribe", { method: "POST", body: formData });
 
       if (!res.ok) {
-        const body = await res.json();
-        setStatus("error");
-        setTranscriptText(body.error ?? "Transcription failed.");
+        if (res.status === 403) {
+          setStatus("idle");
+          setTranscriptText("Tap record to begin speaking...");
+          setShowLimitModal(true);
+        } else {
+          const body = await res.json();
+          setStatus("error");
+          setTranscriptText(body.error ?? "Transcription failed.");
+        }
         return;
       }
 
@@ -421,6 +428,12 @@ export default function RecorderApp() {
             <p style={{ color: status === "idle" ? "#4b5563" : "#d1d5db", fontSize: "13px", lineHeight: "1.6", margin: 0, letterSpacing: "0.02em", minHeight: "42px", maxHeight: "200px", overflowY: "auto", transition: "color 0.3s" }}>
               {transcriptText}
             </p>
+            {status === "processing" && !isPro && (
+              <p style={{ margin: 0, fontSize: "11px", color: "#f59e0b", letterSpacing: "0.04em", borderTop: "1px solid #374151", paddingTop: "8px" }}>
+                ✦ For faster & more accurate transcriptions,{" "}
+                <a href="/dashboard/billing" style={{ color: "#f59e0b", textDecoration: "underline" }}>upgrade to Pro!</a>
+              </p>
+            )}
           </div>
         </div>
 
@@ -445,6 +458,39 @@ export default function RecorderApp() {
           50% { opacity: 0.5; transform: scale(1.3); }
         }
       `}</style>
+
+      {/* Free limit modal */}
+      {showLimitModal && (
+        <div
+          onClick={() => setShowLimitModal(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "#1f2937", borderRadius: "20px", border: "1px solid #374151", padding: "32px 28px", maxWidth: "320px", width: "100%", textAlign: "center", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+          >
+            <div style={{ fontSize: "36px" }}>🎙️</div>
+            <h2 style={{ margin: 0, color: "#f3f4f6", fontSize: "18px", fontWeight: "700", letterSpacing: "0.05em" }}>
+              Monthly limit reached
+            </h2>
+            <p style={{ margin: 0, color: "#9ca3af", fontSize: "13px", lineHeight: "1.6" }}>
+              You&apos;ve used all 5 free transcriptions for this month. Upgrade to Pro for unlimited transcriptions, faster processing, and AI editing.
+            </p>
+            <a
+              href="/dashboard/billing"
+              style={{ display: "block", background: "linear-gradient(135deg, #0284c7, #0ea5e9)", color: "#fff", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: "600", letterSpacing: "0.08em", textDecoration: "none", textTransform: "uppercase" }}
+            >
+              Upgrade to Pro
+            </a>
+            <button
+              onClick={() => setShowLimitModal(false)}
+              style={{ background: "none", border: "none", color: "#6b7280", fontSize: "12px", cursor: "pointer", letterSpacing: "0.05em" }}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
